@@ -2,16 +2,17 @@ import { Bot, Context, InlineKeyboard, Keyboard, session } from "grammy";
 import { config } from "dotenv";
 import { TEXTS, Lang } from "./i18n";
 import { menu } from "./menu";
-import { db } from "./lib/db";
-
+import { db, saveUser } from "./lib/db";
 config();
 
-interface SessionData {
+export interface SessionData {
   step: "lang" | "fullname" | "contact" | "location" | "done";
   lang?: Lang;
   fullName?: string;
   phone?: string;
-  location?: { latitude: number; longitude: number };
+  address?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   menuPath: string[];
 }
 
@@ -45,82 +46,23 @@ async function openMenu(ctx: MyContext) {
   });
 }
 
-// Helper: Save (or update) user in DB using Prisma.
-// Note: The User model stores fullName, phone and a related Location.
-async function saveUser(userId: number, session: SessionData) {
-  const existing = await db.user.findUnique({
-    where: { id: userId },
-    include: { location: true },
-  });
-  if (existing) {
-    return await db.user.update({
-      where: { id: userId },
-      data: {
-        fullName: session.fullName!,
-        phone: session.phone!,
-        // Use upsert to create/update nested Location, if location info is available.
-        location: session.location
-          ? {
-              upsert: {
-                create: {
-                  latitude: session.location.latitude,
-                  longitude: session.location.longitude,
-                },
-                update: {
-                  latitude: session.location.latitude,
-                  longitude: session.location.longitude,
-                },
-              },
-            }
-          : undefined,
-      },
-    });
-  } else {
-    return await db.user.create({
-      data: {
-        // We assume the Telegram user id is used as the primary key.
-        id: userId,
-        fullName: session.fullName!,
-        phone: session.phone!,
-        location: session.location
-          ? {
-              create: {
-                latitude: session.location.latitude,
-                longitude: session.location.longitude,
-              },
-            }
-          : undefined,
-      },
-    });
-  }
-}
-
 // /start - if registration exists, skip to main menu; otherwise, start registration
 bot.command("start", async (ctx) => {
   const userId = ctx.from?.id;
   if (userId) {
     const dbUser = await db.user.findUnique({
       where: { id: userId },
-      include: { location: true },
     });
-    if (
-      dbUser &&
-      dbUser.fullName &&
-      dbUser.phone &&
-      dbUser.location &&
-      dbUser.location.latitude !== null &&
-      dbUser.location.longitude !== null
-    ) {
+    if (dbUser && dbUser.fullName && dbUser.phone) {
       // User already registered. Use session language if available, or default to "ru".
       ctx.session = {
         step: "done",
         lang: ctx.session.lang || "ru",
         fullName: dbUser.fullName,
         phone: dbUser.phone,
-        location: {
-          latitude: dbUser.location.latitude!,
-          longitude: dbUser.location.longitude!,
-        },
+        address: dbUser.address || "",
+        latitude: dbUser.latitude,
+        longitude: dbUser.longitude,
         menuPath: [],
       };
       await openMenu(ctx);
@@ -165,51 +107,188 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
+  //handle location (adress) message for registration
+  if (step === "location") {
+    ctx.session.address = ctx.message.text;
+    ctx.session.step = "done";
+    // Save the registered user.
+    if (ctx.from?.id) {
+      await saveUser(ctx.from.id, ctx.session);
+      await openMenu(ctx);
+    }
+    return;
+  }
+
   // If already registered (step === done), treat text input as menu navigation.
   if (step === "done") {
     const text = ctx.message.text;
+
     // Start from the root of the menu tree.
     let currentNode = menu[lang];
     for (const key of ctx.session.menuPath) {
-      currentNode = (currentNode.submenus || {})[key];
+      if (!currentNode || !currentNode.submenus) {
+        console.error("Invalid menu path:", ctx.session.menuPath);
+        await ctx.reply(
+          "Произошла ошибка в меню. Возвращаемся в главное меню."
+        );
+        await openMenu(ctx);
+        return;
+      }
+      currentNode = currentNode.submenus[key];
     }
-    // Handle back button only if menuPath is not empty.
+
+    // Handle "🛍 Заказать" -> Show categories
+    if (text === "🛍 Заказать") {
+      const categories = await db.category.findMany({
+        where: { parentId: null }, // Fetch top-level categories
+      });
+
+      const categoryButtons = categories.map((category) => [category.name]);
+      ctx.session.menuPath = ["🛍 Заказать"];
+      await ctx.reply("Выберите категорию:", {
+        reply_markup: {
+          keyboard: [...categoryButtons, [TEXTS[lang].back]],
+          resize_keyboard: true,
+        },
+      });
+      return;
+    }
+
+    /// handle back button
+    if (text === TEXTS[lang].back) {
+      ctx.session.menuPath.pop();
+      await openMenu(ctx);
+      return;
+    }
+
+    // Handle category selection -> Show subcategories or products
+    if (ctx.session.menuPath.includes("🛍 Заказать")) {
+      const selectedCategory = await db.category.findUnique({
+        where: { name: text },
+        include: { subCategories: true, products: true },
+      });
+
+      if (!selectedCategory) {
+        await ctx.reply("Категория не найдена.");
+        return;
+      }
+
+      ctx.session.menuPath.push(text);
+
+      if (selectedCategory.subCategories.length > 0) {
+        // Show subcategories
+        const subcategoryButtons = selectedCategory.subCategories.map((sub) => [
+          sub.name,
+        ]);
+        await ctx.reply("Выберите подкатегорию:", {
+          reply_markup: {
+            keyboard: [...subcategoryButtons, [TEXTS[lang].back]],
+            resize_keyboard: true,
+          },
+        });
+      } else if (selectedCategory.products.length > 0) {
+        // Show products
+        const productButtons = selectedCategory.products.map((product) => [
+          product.name,
+        ]);
+        await ctx.reply("Выберите продукт:", {
+          reply_markup: {
+            keyboard: [...productButtons, [TEXTS[lang].back]],
+            resize_keyboard: true,
+          },
+        });
+      } else {
+        await ctx.reply("Нет доступных подкатегорий или продуктов.");
+      }
+      return;
+    }
+
+    // Handle product selection
+    const selectedProduct = await db.product.findUnique({
+      where: { name: text },
+    });
+
+    if (selectedProduct) {
+      // Format the product details
+      const productDetails = `
+Продукт: ${selectedProduct.name}
+Цена: ${selectedProduct.price}₽
+${selectedProduct.description ? `Описание: ${selectedProduct.description}` : ""}
+`;
+
+      // Send the product details as a message
+      await ctx.reply(productDetails, {
+        reply_markup: {
+          keyboard: [[TEXTS[lang].back]],
+          resize_keyboard: true,
+        },
+      });
+      return;
+    }
+
+    // Handle back button
     if (text === TEXTS[lang].back) {
       if (ctx.session.menuPath.length > 0) {
         ctx.session.menuPath.pop();
-      } else {
-        // Already at root; optionally, you can ignore or notify the user.
-        await ctx.reply("Already at the main menu.");
       }
-    } else if (currentNode.submenus && currentNode.submenus[text]) {
-      // If the submenu exists, push the selection.
-      ctx.session.menuPath.push(text);
-    } else {
-      // If user input doesn't match any submenu, we assume it's an action.
-      await ctx.reply(`You selected: ${text}`);
+
+      // Navigate back to the appropriate menu level
+      currentNode = menu[lang];
+      for (const key of ctx.session.menuPath) {
+        currentNode = (currentNode.submenus || {})[key];
+      }
+
+      if (ctx.session.menuPath.includes("🛍 Заказать")) {
+        const parentCategoryName =
+          ctx.session.menuPath[ctx.session.menuPath.length - 1];
+        const parentCategory = await db.category.findUnique({
+          where: { name: parentCategoryName },
+          include: { subCategories: true, products: true },
+        });
+
+        if (
+          parentCategory?.subCategories &&
+          parentCategory?.subCategories.length > 0
+        ) {
+          const subcategoryButtons = parentCategory.subCategories.map((sub) => [
+            sub.name,
+          ]);
+          await ctx.reply("Выберите подкатегорию:", {
+            reply_markup: {
+              keyboard: [...subcategoryButtons, [TEXTS[lang].back]],
+              resize_keyboard: true,
+            },
+          });
+        } else if (
+          parentCategory?.subCategories &&
+          parentCategory?.subCategories.length > 0
+        ) {
+          const productButtons = parentCategory.products.map((product) => [
+            product.name,
+          ]);
+          await ctx.reply("Выберите продукт:", {
+            reply_markup: {
+              keyboard: [...productButtons, [TEXTS[lang].back]],
+              resize_keyboard: true,
+            },
+          });
+        } else {
+          await ctx.reply("Выберите категорию:", {
+            reply_markup: {
+              keyboard: [[TEXTS[lang].back]],
+              resize_keyboard: true,
+            },
+          });
+        }
+      } else {
+        // Return to the main menu
+        await openMenu(ctx);
+      }
       return;
     }
-    // Build new keyboard (not inlineKeyboar) for the current submenu if there is an existing menu edit it
-    let newMenuNode = menu[lang];
-    for (const key of ctx.session.menuPath) {
-      newMenuNode = (newMenuNode.submenus || {})[key];
-    }
-    const newKeyboardOptions = Object.keys(newMenuNode.submenus || {}).map(
-      (key) => [key]
-    );
-    // Add back button if not at the root menu.
-    if (ctx.session.menuPath.length > 0) {
-      newKeyboardOptions.push([TEXTS[lang].back]);
-    }
-    // Send the updated menu.
-    await ctx.reply(TEXTS[lang].main_menu, {
-      reply_markup: {
-        keyboard: newKeyboardOptions,
-        resize_keyboard: true,
-        one_time_keyboard: false, // Keep the keyboard persistent
-      },
-    });
-    return;
+
+    // If input doesn't match any menu item, notify the user
+    await ctx.reply("Пожалуйста, выберите пункт меню.");
   }
 });
 
@@ -236,10 +315,8 @@ bot.on("message:location", async (ctx) => {
   const { step, lang } = ctx.session;
   if (!lang) return;
   if (step === "location") {
-    ctx.session.location = {
-      latitude: ctx.message.location.latitude,
-      longitude: ctx.message.location.longitude,
-    };
+    ctx.session.latitude = ctx.message.location.latitude;
+    ctx.session.longitude = ctx.message.location.longitude;
     ctx.session.step = "done";
     // Save the registered user.
     if (ctx.from?.id) {
@@ -253,11 +330,11 @@ bot.on("message:location", async (ctx) => {
 bot.api.setMyCommands([
   {
     command: "start",
-    description: "Запуск бота",
+    description: "Запуск бота | Botni ishga tushirish",
   },
   {
     command: "help",
-    description: "if you need help",
+    description: "Помощь | Yordam",
   },
 ]);
 

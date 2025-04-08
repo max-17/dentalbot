@@ -1,3 +1,8 @@
+import { Product } from "@prisma/client";
+import { Category } from "@prisma/client";
+import { Order } from "@prisma/client";
+import { OrderItem } from "@prisma/client";
+
 export interface MenuNode {
   text: string; // Menu item label
   submenus?: { [key: string]: MenuNode }; // Optional submenus
