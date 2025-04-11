@@ -203,4 +203,4 @@ bot.catch((err) => {
   console.error("Bot error:", err);
 });
 
-// bot.start();
+bot.start();

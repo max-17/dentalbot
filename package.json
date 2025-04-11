@@ -11,6 +11,6 @@
 		"tsx": "^4.19.3"
 	},
 	"scripts": {
-		"start": "tsx watch ./src/bot.ts"
+		"start": "tsx watch ./api/bot.ts"
 	}
 }
