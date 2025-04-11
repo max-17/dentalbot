@@ -3,7 +3,6 @@
 		"@prisma/client": "6.5.0",
 		"dotenv": "^16.4.7",
 		"grammy": "^1.35.1",
-		"telegraf": "^4.16.3",
 		"typescript": "^5.8.3"
 	},
 	"devDependencies": {
@@ -12,6 +11,6 @@
 		"tsx": "^4.19.3"
 	},
 	"scripts": {
-		"start": "tsx watch bot.ts"
+		"start": "tsx watch ./src/bot.ts"
 	}
 }

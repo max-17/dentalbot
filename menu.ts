@@ -4,7 +4,7 @@ import { Order } from "@prisma/client";
 import { OrderItem } from "@prisma/client";
 import { MyContext } from "./types";
 import { db } from "./lib/db";
-import { Lang, TEXTS } from "./i18n";
+import { Lang, TEXTS } from "./lib/i18n";
 
 export interface MenuNode {
   text: string; // Menu item label

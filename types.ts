@@ -1,5 +1,5 @@
 import { Context } from "grammy";
-import { Lang } from "./i18n";
+import { Lang } from "./lib/i18n";
 
 export interface SessionData {
   step: "lang" | "fullname" | "contact" | "location" | "done";

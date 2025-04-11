@@ -1,4 +1,4 @@
-import { db } from "./lib/db";
+import { db } from "./db";
 
 const rawProducts = [
   ["Композиты", "Пастообразные", "ESTELITE ASTERIA SYRINGE A1B", 53],

@@ -1,19 +1,18 @@
 import { Bot, Keyboard, session } from "grammy";
 import { config } from "dotenv";
-import { TEXTS, Lang } from "./i18n";
+import { TEXTS } from "../lib/i18n";
 import {
   handleBackButton,
   handleCart,
-  menu,
   openMenu,
   showCategories,
   showDeliveryOptions,
   showProductDetails,
   showProducts,
   showSubcategories,
-} from "./menu";
-import { db, saveUser } from "./lib/db";
-import { startCommand } from "./commands";
+} from "../menu";
+import { db, saveUser } from "../lib/db";
+import { startCommand } from "../commands";
 import {
   addToCart,
   cartClear,
@@ -24,8 +23,8 @@ import {
   decrease_,
   increase_,
   ru_uz,
-} from "./callbackQueries";
-import { MyContext, SessionData } from "./types";
+} from "../callbackQueries";
+import { MyContext, SessionData } from "../types";
 config();
 
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
@@ -204,4 +203,4 @@ bot.catch((err) => {
   console.error("Bot error:", err);
 });
 
-bot.start();
+// bot.start();

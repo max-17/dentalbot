@@ -1,7 +1,7 @@
 import { MyContext } from "./types";
 import { db } from "./lib/db";
 import { handleCart } from "./menu";
-import { Lang, TEXTS } from "./i18n";
+import { Lang, TEXTS } from "./lib/i18n";
 
 export const cartRemove = async (ctx: MyContext) => {
   const orderItemId = Number(ctx.match![1]);
