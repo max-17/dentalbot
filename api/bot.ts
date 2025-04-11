@@ -1,4 +1,4 @@
-import { Bot, Keyboard, session } from "grammy";
+import { Bot, Keyboard, session, webhookCallback } from "grammy";
 import { config } from "dotenv";
 import { TEXTS } from "../lib/i18n";
 import {
@@ -28,7 +28,7 @@ import { MyContext, SessionData } from "../types";
 config();
 
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
-
+export default webhookCallback(bot, "https");
 // Initialize session
 bot.use(
   session({
