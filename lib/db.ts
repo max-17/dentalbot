@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { SessionData } from "../bot";
+import { SessionData } from "../types";
 
 export const db = new PrismaClient();
 

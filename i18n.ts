@@ -11,6 +11,9 @@ export const TEXTS: Record<
     back: string;
     share_contact: string;
     help: string;
+    delivery: string;
+    pickup: string;
+    share_location: string;
   }
 > = {
   ru: {
@@ -26,6 +29,9 @@ export const TEXTS: Record<
     back: "⬅️ Назад",
     share_contact: "📞 Отправить номер телефона",
     help: "Помощь",
+    delivery: "Доставка",
+    pickup: "Самовывоз",
+    share_location: "📍 Поделиться местоположением",
   },
   uz: {
     chosen_language: "Tanlangan til:",
@@ -40,5 +46,8 @@ export const TEXTS: Record<
     back: "⬅️ Orqaga",
     share_contact: "📞 Telefon raqamni yuborish",
     help: "Yordam",
+    delivery: "Yetkazib berish",
+    pickup: "Olib ketish",
+    share_location: "📍 Manzilni yuborish",
   },
 };
