@@ -16,6 +16,7 @@ export interface SessionData {
     | "deliveryType"
     | "category"
     | "subcategory"
+    | "settings"
     | "product";
   currentCategoryId?: number | null; // Tracks the current category or subcategory
   cart?: Record<number, number>; // Tracks the cart items and their quantities

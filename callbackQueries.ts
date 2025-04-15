@@ -296,13 +296,19 @@ export const increase_ = async (ctx: MyContext) => {
 };
 
 export const ru_uz = async (ctx: MyContext) => {
-  if (ctx.session.step !== "lang") return;
   const lang = ctx.callbackQuery?.data as Lang;
   if (!lang) return;
   ctx.session.__language_code = lang;
-  ctx.session.step = "fullname";
-  await ctx.answerCallbackQuery(
-    ctx.t("chosen_language") + ` ${lang.toUpperCase()}`
-  );
-  await ctx.reply(ctx.t("enter_full_name"));
+  await db.user.update({
+    where: { id: ctx.from?.id },
+    data: { language: lang },
+  });
+  await ctx.answerCallbackQuery(ctx.t("chosen_language") + ` ${lang}`);
+  //delete message with reply_markup
+  await ctx.deleteMessage();
+  await ctx.reply(ctx.t("language_changed"));
+  if (ctx.session.step === "lang") {
+    ctx.session.step = "fullname";
+    await ctx.reply(ctx.t("enter_full_name"));
+  }
 };

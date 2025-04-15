@@ -8,7 +8,7 @@ export interface MenuNode {
 }
 
 export const menu: { [lang: string]: MenuNode } = {
-  ru: {
+  RU: {
     text: "Главное меню",
     submenus: {
       "🛍️ Заказать": {
@@ -16,12 +16,6 @@ export const menu: { [lang: string]: MenuNode } = {
         submenus: {
           Доставка: {
             text: "Доставка",
-
-            //submenus: {'categoryname': {text: 'categoryname', submenus: {'subcategoryname': {text: 'subcategoryname',}}
-            // submenus: async () =>
-            //   (await db.category.findMany({ where: { parentId: null } })).map(
-            //     (category) => ({ text: category.name })
-            //   ),
           },
           Самовывоз: { text: "Самовывоз" },
         },
@@ -39,7 +33,7 @@ export const menu: { [lang: string]: MenuNode } = {
       "📍 наш адрес": { text: "📍 наш адрес" },
     },
   },
-  uz: {
+  UZ: {
     text: "Asosiy menyu",
     submenus: {
       "Buyurtma berish": {
@@ -104,6 +98,24 @@ export async function showDeliveryOptions(ctx: MyContext) {
   await ctx.reply(ctx.t("choose_delivery_method"), {
     reply_markup: {
       keyboard: deliveryOptions,
+      resize_keyboard: true,
+    },
+  });
+}
+
+export async function handleSettings(ctx: MyContext) {
+  const settingsOptions = [
+    [ctx.t("back")], // Add a back button
+    [ctx.t("change_language")],
+    [ctx.t("change_phone")],
+    [ctx.t("change_address")],
+  ];
+
+  ctx.session.currentLevel = "settings";
+
+  await ctx.reply(ctx.t("menu_settings"), {
+    reply_markup: {
+      keyboard: settingsOptions,
       resize_keyboard: true,
     },
   });
@@ -237,7 +249,8 @@ export async function handleBackButton(ctx: MyContext) {
       await showDeliveryOptions(ctx);
       break;
     }
-    case "deliveryType": {
+    case "deliveryType":
+    case "settings": {
       ctx.session.currentLevel = "main";
       await openMenu(ctx);
       break;

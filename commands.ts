@@ -11,10 +11,10 @@ export async function startCommand(ctx: MyContext) {
       where: { id: userId },
     });
     if (dbUser && dbUser.fullName && dbUser.phone) {
-      // User already registered. Use session language if available, or default to "ru".
+      // User already registered. Use session language if available, or default to "RU".
       ctx.session = {
         step: "done",
-        __language_code: dbUser.language.toLocaleLowerCase() as "RU" | "UZ",
+        __language_code: dbUser.language,
         fullName: dbUser.fullName,
         phone: dbUser.phone,
         address: dbUser.address || "",
@@ -27,8 +27,8 @@ export async function startCommand(ctx: MyContext) {
   }
   // Start registration flow.
   ctx.session.step = "lang";
-  const langKeyboard = new InlineKeyboard().text("UZ", "uz").text("RU", "ru");
-  await ctx.reply("Select Language / Tilni tanlang / Выберите язык:", {
+  const langKeyboard = new InlineKeyboard().text("RU", "RU").text("UZ", "UZ");
+  await ctx.reply("Выберите язык / Tilni tanlang:", {
     reply_markup: langKeyboard,
   });
 }

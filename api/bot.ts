@@ -1,9 +1,17 @@
-import { Bot, Keyboard, session, webhookCallback, SessionFlavor } from "grammy";
+import {
+  Bot,
+  Keyboard,
+  session,
+  webhookCallback,
+  SessionFlavor,
+  InlineKeyboard,
+} from "grammy";
 import { config } from "dotenv";
 import { I18n } from "@grammyjs/i18n";
 import {
   handleBackButton,
   handleCart,
+  handleSettings,
   openMenu,
   showCategories,
   showDeliveryOptions,
@@ -38,7 +46,7 @@ bot.use(
 
 // Initialize i18n middleware
 const i18n = new I18n({
-  defaultLocale: "ru", // Default language
+  defaultLocale: "RU", // Default language
   directory: "locales", // Path to the locales folder
   useSession: true, // Use session to store the user's language
 });
@@ -51,9 +59,6 @@ bot.command("start", startCommand);
 bot.command("main", async (ctx) => {
   await openMenu(ctx);
 });
-
-// Handle language selection (registration step: lang)
-bot.callbackQuery(["uz", "ru"], ru_uz);
 
 // Handle contact message for registration (phone)
 bot.on("message:contact", async (ctx) => {
@@ -70,6 +75,15 @@ bot.on("message:contact", async (ctx) => {
       reply_markup: locationKeyboard,
     });
     return;
+  } else {
+    ctx.session.phone = ctx.message.contact.phone_number;
+    if (ctx.from?.id) {
+      await db.user.update({
+        where: { id: ctx.from.id },
+        data: { phone: ctx.session.phone },
+      });
+      await ctx.reply(ctx.t("phone_updated"));
+    } else await ctx.reply(ctx.t("user_not_found"));
   }
 });
 
@@ -121,24 +135,48 @@ bot.on("message:text", async (ctx) => {
 
   // Menu navigation
   if (step === "done" && lang) {
-    if (text === ctx.t("menu_order")) {
-      await showDeliveryOptions(ctx);
-      return;
-    }
+    switch (text) {
+      case ctx.t("menu_order"):
+        await showDeliveryOptions(ctx);
+        return;
 
-    if ([ctx.t("delivery"), ctx.t("pickup")].includes(text)) {
-      await showCategories(ctx);
-      return;
-    }
+      case ctx.t("delivery"):
+      case ctx.t("pickup"):
+        await showCategories(ctx);
+        return;
 
-    if (text === ctx.t("back")) {
-      await handleBackButton(ctx);
-      return;
-    }
+      case ctx.t("menu_settings"):
+        await handleSettings(ctx);
+        return;
 
-    if (text === ctx.t("menu_cart")) {
-      await handleCart(ctx);
-      return;
+      case ctx.t("back"):
+        await handleBackButton(ctx);
+        return;
+
+      case ctx.t("menu_cart"):
+        await handleCart(ctx);
+        return;
+      case ctx.t("change_language"):
+        const langKeyboard = new InlineKeyboard()
+          .text("RU", "RU")
+          .text("UZ", "UZ");
+
+        await ctx.reply(ctx.t("change_language"), {
+          reply_markup: langKeyboard,
+        });
+        return;
+      case ctx.t("change_phone"):
+        const contactKeyboard = new Keyboard()
+          .requestContact(ctx.t("share_contact"))
+          .resized();
+
+        await ctx.reply(ctx.t("enter_phone"), {
+          reply_markup: contactKeyboard,
+        });
+
+        return;
+      default:
+        break;
     }
     if (ctx.session.currentLevel === "category") {
       const category = await db.category.findUnique({ where: { name: text } });
@@ -184,6 +222,8 @@ bot.callbackQuery(/^cart_decrease_(\d+)$/, cartDecrease);
 bot.callbackQuery(/^cart_remove_(\d+)$/, cartRemove);
 
 bot.callbackQuery("cart_clear", cartClear);
+
+bot.callbackQuery(["UZ", "RU"], ru_uz);
 
 bot.callbackQuery("cart_back", async (ctx) => {
   await handleBackButton(ctx); // Navigate back to the previous menu
