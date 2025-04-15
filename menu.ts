@@ -1,10 +1,6 @@
-import { Product } from "@prisma/client";
-import { Category } from "@prisma/client";
-import { Order } from "@prisma/client";
-import { OrderItem } from "@prisma/client";
 import { MyContext } from "./types";
 import { db } from "./lib/db";
-import { Lang, TEXTS } from "./lib/i18n";
+import { Lang } from "./lib/i18n";
 
 export interface MenuNode {
   text: string; // Menu item label
@@ -15,10 +11,18 @@ export const menu: { [lang: string]: MenuNode } = {
   ru: {
     text: "Главное меню",
     submenus: {
-      "🛍 Заказать": {
-        text: "🛍 Заказать",
+      "🛍️ Заказать": {
+        text: "🛍️ Заказать",
         submenus: {
-          Доставка: { text: "Доставка" },
+          Доставка: {
+            text: "Доставка",
+
+            //submenus: {'categoryname': {text: 'categoryname', submenus: {'subcategoryname': {text: 'subcategoryname',}}
+            // submenus: async () =>
+            //   (await db.category.findMany({ where: { parentId: null } })).map(
+            //     (category) => ({ text: category.name })
+            //   ),
+          },
           Самовывоз: { text: "Самовывоз" },
         },
       },
@@ -32,22 +36,22 @@ export const menu: { [lang: string]: MenuNode } = {
           "Сменить Адрес": { text: "Сменить Адрес" },
         },
       },
-      "📍 Ближайший филиал": { text: "📍 Ближайший филиал" },
+      "📍 наш адрес": { text: "📍 наш адрес" },
     },
   },
   uz: {
     text: "Asosiy menyu",
     submenus: {
-      "🛍 Buyurtma berish": {
-        text: "🛍 Buyurtma berish",
+      "Buyurtma berish": {
+        text: "Buyurtma berish",
         submenus: {
           "Yetkazib berish": { text: "Yetkazib berish" },
           "Olib ketish": { text: "Olib ketish" },
         },
       },
-      "📦 Buyurtmalarim": { text: "📦 Buyurtmalarim" },
-      "⚙️ Sozlamalar": {
-        text: "⚙️ Sozlamalar",
+      Buyurtmalarim: { text: "Buyurtmalarim" },
+      Sozlamalar: {
+        text: "Sozlamalar",
         submenus: {
           Yordam: { text: "Yordam" },
           "Tilni o'zgartirish": { text: "Tilni o'zgartirish" },
@@ -55,14 +59,13 @@ export const menu: { [lang: string]: MenuNode } = {
           "Manzilni o'zgartirish": { text: "Manzilni o'zgartirish" },
         },
       },
-      "📍 Eng yaqin filial": { text: "📍 Eng yaqin filial" },
+      "Eng yaqin filial": { text: "Eng yaqin filial" },
     },
   },
 };
 
-// Helper: Open main menu using the menu tree from menu.ts
 export async function openMenu(ctx: MyContext) {
-  const lang = ctx.session.lang as Lang;
+  const lang = ctx.session.__language_code as Lang;
 
   const mainMenuNode = menu[lang];
   const submenus = mainMenuNode.submenus || {};
@@ -76,11 +79,11 @@ export async function openMenu(ctx: MyContext) {
     });
 
     if (cart) {
-      keyboardOptions.push(["🛒 Корзина"]); // Add "Cart" button if cart exists
+      keyboardOptions.push([ctx.t("menu_cart")]); // Add "menu_cart" button if cart exists
     }
   }
 
-  await ctx.reply(TEXTS[lang].main_menu, {
+  await ctx.reply(ctx.t("main_menu"), {
     reply_markup: {
       keyboard: keyboardOptions,
       resize_keyboard: true,
@@ -90,16 +93,15 @@ export async function openMenu(ctx: MyContext) {
 }
 
 export async function showDeliveryOptions(ctx: MyContext) {
-  const lang = ctx.session.lang!;
   const deliveryOptions = [
-    [TEXTS[lang].delivery],
-    [TEXTS[lang].pickup],
-    [TEXTS[lang].back], // Add a back button
+    [ctx.t("back")], // Add a back button
+    [ctx.t("delivery")],
+    [ctx.t("pickup")],
   ];
 
   ctx.session.currentLevel = "deliveryType";
 
-  await ctx.reply("Выберите способ получения:", {
+  await ctx.reply(ctx.t("choose_delivery_method"), {
     reply_markup: {
       keyboard: deliveryOptions,
       resize_keyboard: true,
@@ -113,34 +115,35 @@ export async function showCategories(ctx: MyContext) {
   });
 
   const categoryButtons = categories.map((category) => [category.name]);
-  categoryButtons.push([TEXTS[ctx.session.lang!].back]); // Add a back button
+  categoryButtons.unshift([ctx.t("back"), ctx.t("menu_cart")]); // Add a back button
 
   ctx.session.currentLevel = "category";
   ctx.session.currentCategoryId = null; // Reset to top-level categories
 
-  await ctx.reply("Выберите категорию:", {
+  await ctx.reply(ctx.t("choose_category"), {
     reply_markup: {
       keyboard: categoryButtons,
       resize_keyboard: true,
     },
   });
 }
+
 export async function showSubcategories(ctx: MyContext, parentId: number) {
   const subcategories = await db.category.findMany({
     where: { parentId },
   });
 
   if (subcategories.length === 0) {
-    await ctx.reply("Нет доступных подкатегорий.");
+    await ctx.reply(ctx.t("no_subcategories"));
     return;
   }
 
   const subcategoryButtons = subcategories.map((sub) => [sub.name]);
-  subcategoryButtons.push([TEXTS[ctx.session.lang!].back]); // Add a back button
+  subcategoryButtons.unshift([ctx.t("back"), ctx.t("menu_cart")]); // Add a back button
 
   ctx.session.currentLevel = "subcategory";
 
-  await ctx.reply("Выберите подкатегорию:", {
+  await ctx.reply(ctx.t("choose_subcategory"), {
     reply_markup: {
       keyboard: subcategoryButtons,
       resize_keyboard: true,
@@ -157,18 +160,18 @@ export async function showProducts(ctx: MyContext, subcategoryId: number) {
 
   if (category!.products.length > 0) {
     const productButtons = category!.products.map((product) => [product.name]);
-    productButtons.push([TEXTS[ctx.session.lang!].back]); // Add a back button
+    productButtons.unshift([ctx.t("back"), ctx.t("menu_cart")]); // Add a back button
 
     ctx.session.currentLevel = "product";
 
-    await ctx.reply("Выберите продукт:", {
+    await ctx.reply(ctx.t("choose_product"), {
       reply_markup: {
         keyboard: productButtons,
         resize_keyboard: true,
       },
     });
   } else {
-    await ctx.reply("Нет доступных подкатегорий или продуктов.");
+    await ctx.reply(ctx.t("no_products_available"));
   }
 }
 
@@ -178,14 +181,14 @@ export async function showProductDetails(ctx: MyContext, productName: string) {
   });
 
   if (!product) {
-    await ctx.reply("Продукт не найден.");
+    await ctx.reply(ctx.t("product_not_found"));
     return;
   }
 
   const productDetails = `
-Продукт: ${product.name}
-Цена: ${product.price}₽
-${product.description ? `Описание: ${product.description}` : ""}
+${ctx.t("product")}: ${product.name}
+${ctx.t("price")}: ${product.price} y.e
+${product.description ? `${ctx.t("description")}: ${product.description}` : ""}
 `;
 
   await ctx.replyWithPhoto(
@@ -201,7 +204,7 @@ ${product.description ? `Описание: ${product.description}` : ""}
           ],
           [
             {
-              text: "Добавить в корзину",
+              text: ctx.t("add_to_cart"),
               callback_data: `add_to_cart_${product.id}`,
             },
           ],
@@ -212,162 +215,62 @@ ${product.description ? `Описание: ${product.description}` : ""}
 }
 
 export async function handleBackButton(ctx: MyContext) {
-  // product -> subcategory
-  if (ctx.session.currentLevel === "product") {
-    const subCategory = await db.category.findUnique({
-      where: { id: ctx.session.currentCategoryId! },
-    });
-    ctx.session.currentLevel = "subcategory";
-    ctx.session.currentCategoryId = subCategory?.parentId!; // Reset to parent category
-    await showSubcategories(ctx, subCategory?.parentId!);
-  }
-  // subcategory -> category
-  else if (ctx.session.currentLevel === "subcategory") {
-    ctx.session.currentLevel = "category";
-    ctx.session.currentCategoryId = null; // Reset to top-level categories
-    await showCategories(ctx);
-  }
-  // category -> deliveryType
-  else if (ctx.session.currentLevel === "category") {
-    ctx.session.currentLevel = "deliveryType";
-    await showDeliveryOptions(ctx);
-  }
-  // cart -> main menu
-  else if (ctx.session.currentLevel === "cart") {
-    ctx.session.currentLevel = "main";
-    await openMenu(ctx);
-  }
-  // deliveryType -> main menu
-  else if (ctx.session.currentLevel === "deliveryType") {
-    ctx.session.currentLevel = "main";
-    await openMenu(ctx);
+  // cart/product -> subcategory
+  switch (ctx.session.currentLevel) {
+    case "product": {
+      const subCategory = await db.category.findUnique({
+        where: { id: ctx.session.currentCategoryId! },
+      });
+      ctx.session.currentLevel = "subcategory";
+      ctx.session.currentCategoryId = subCategory?.parentId!; // Reset to parent category
+      await showSubcategories(ctx, subCategory?.parentId!);
+      break;
+    }
+    case "subcategory": {
+      ctx.session.currentLevel = "category";
+      ctx.session.currentCategoryId = null; // Reset to top-level categories
+      await showCategories(ctx);
+      break;
+    }
+    case "category": {
+      ctx.session.currentLevel = "deliveryType";
+      await showDeliveryOptions(ctx);
+      break;
+    }
+    case "deliveryType": {
+      ctx.session.currentLevel = "main";
+      await openMenu(ctx);
+      break;
+    }
+    default:
+      break;
   }
 }
-
-// export async function showCart(ctx: MyContext) {
-//   const userId = ctx.from?.id;
-//   if (!userId) return;
-
-//   // Fetch the user's active cart
-//   const cart = await db.order.findFirst({
-//     where: { userId, status: "PENDING" },
-//     include: { items: { include: { product: true } } },
-//   });
-
-//   if (!cart || cart.items.length === 0) {
-//     await ctx.reply("Ваша корзина пуста.", {
-//       reply_markup: {
-//         keyboard: [[TEXTS[ctx.session.lang!].back]],
-//         resize_keyboard: true,
-//       },
-//     });
-//     return;
-//   }
-
-//   // Format the cart items
-//   const cartDetails = cart.items
-//     .map(
-//       (item) =>
-//         `${item.product.name} x ${item.quantity} = ${
-//           item.quantity * Number(item.product.price)
-//         }₽`
-//     )
-//     .join("\n");
-
-//   const total = cart.items.reduce(
-//     (sum, item) => sum + item.quantity * Number(item.product.price),
-//     0
-//   );
-
-//   const inlineKeyboard = cart.items.map((item) => [
-//     { text: "➖", callback_data: `cart_decrease_${item.id}` },
-//     { text: item.product.name, callback_data: `cart_item_${item.id}` },
-//     { text: "➕", callback_data: `cart_increase_${item.id}` },
-//   ]);
-
-//   inlineKeyboard.push(
-//     [{ text: "Очистить", callback_data: "cart_clear" }],
-//     [{ text: "⬅️ Назад", callback_data: "cart_back" }]
-//   );
-
-//   ctx.session.currentLevel = "cart"; // Set the current level to "cart"
-
-//   await ctx.reply(`Корзина:\n\n${cartDetails}\n\nИтого: ${total}₽`, {
-//     reply_markup: {
-//       inline_keyboard: inlineKeyboard,
-//     },
-//   });
-// }
-
-// export async function getCartDetails(ctx: MyContext) {
-//   const userId = ctx.from?.id;
-//   if (!userId) return { text: "Ваша корзина пуста.", inlineKeyboard: [] };
-
-//   // Fetch the user's active cart
-//   const cart = await db.order.findFirst({
-//     where: { userId, status: "PENDING" },
-//     include: { items: { include: { product: true } } },
-//   });
-
-//   if (!cart || cart.items.length === 0) {
-//     return { text: "Ваша корзина пуста.", inlineKeyboard: [] };
-//   }
-
-//   // Format the cart items
-//   const cartDetails = cart.items
-//     .map(
-//       (item) =>
-//         `${item.product.name} x ${item.quantity} = ${
-//           item.quantity * Number(item.product.price)
-//         }₽`
-//     )
-//     .join("\n");
-
-//   const total = cart.items.reduce(
-//     (sum, item) => sum + item.quantity * Number(item.product.price),
-//     0
-//   );
-
-//   const inlineKeyboard = [
-//     [{ text: "✅ Подтвердить заказ", callback_data: "cart_confirm" }],
-//     [{ text: "🗑 Очистить корзину", callback_data: "cart_clear" }],
-//     ...cart.items.map((item) => [
-//       { text: "➖", callback_data: `cart_decrease_${item.id}` },
-//       { text: `${item.product.name}`, callback_data: `cart_item_${item.id}` },
-//       { text: "➕", callback_data: `cart_increase_${item.id}` },
-//     ]),
-//   ];
-
-//   return {
-//     text: `Корзина:\n\n${cartDetails}\n\nИтого: ${total}₽`,
-//     inlineKeyboard,
-//   };
-// }
 
 export async function handleCart(ctx: MyContext, sendReply: boolean = true) {
   const userId = ctx.from?.id;
   if (!userId) {
     if (sendReply) {
-      await ctx.reply("Ваша корзина пуста.");
+      await ctx.reply(ctx.t("cart_empty"));
     }
-    return { text: "Ваша корзина пуста.", inlineKeyboard: [] };
+    return { text: ctx.t("cart_empty"), inlineKeyboard: [] };
   }
 
   // Fetch the user's active cart
   const cart = await db.order.findFirst({
     where: { userId, status: "PENDING" },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true }, orderBy: { id: "desc" } } },
   });
 
   if (!cart || cart.items.length === 0) {
     const emptyCartResponse = {
-      text: "Ваша корзина пуста.",
+      text: ctx.t("cart_empty"),
       inlineKeyboard: [],
     };
     if (sendReply) {
       await ctx.reply(emptyCartResponse.text, {
         reply_markup: {
-          keyboard: [[TEXTS[ctx.session.lang!].back]],
+          keyboard: [[ctx.t("back")]],
           resize_keyboard: true,
         },
       });
@@ -381,7 +284,7 @@ export async function handleCart(ctx: MyContext, sendReply: boolean = true) {
       (item) =>
         `${item.product.name} x ${item.quantity} = ${
           item.quantity * Number(item.product.price)
-        }₽`
+        } y.e`
     )
     .join("\n");
 
@@ -391,8 +294,8 @@ export async function handleCart(ctx: MyContext, sendReply: boolean = true) {
   );
 
   const inlineKeyboard = [
-    [{ text: "✅ Подтвердить заказ", callback_data: "cart_confirm" }],
-    [{ text: "🗑 Очистить корзину", callback_data: "cart_clear" }],
+    [{ text: ctx.t("confirm_order"), callback_data: "cart_confirm" }],
+    [{ text: ctx.t("clear_cart"), callback_data: "cart_clear" }],
     ...cart.items.map((item) => [
       { text: "➖", callback_data: `cart_decrease_${item.id}` },
       { text: `${item.product.name}`, callback_data: `cart_item_${item.id}` },
@@ -401,12 +304,13 @@ export async function handleCart(ctx: MyContext, sendReply: boolean = true) {
   ];
 
   const response = {
-    text: `Корзина:\n\n${cartDetails}\n\nИтого: ${total}₽`,
+    text: `${ctx.t("menu_cart")}:\n\n${cartDetails}\n\n${ctx.t(
+      "total"
+    )}: ${total} y.e`,
     inlineKeyboard,
   };
 
   if (sendReply) {
-    ctx.session.currentLevel = "cart"; // Set the current level to "cart"
     await ctx.reply(response.text, {
       reply_markup: {
         inline_keyboard: response.inlineKeyboard,

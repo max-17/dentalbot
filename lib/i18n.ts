@@ -1,4 +1,4 @@
-export type Lang = "uz" | "ru";
+export type Lang = "RU" | "UZ";
 
 export const TEXTS: Record<
   Lang,
@@ -16,38 +16,38 @@ export const TEXTS: Record<
     share_location: string;
   }
 > = {
-  ru: {
+  RU: {
     chosen_language: "Выбран язык:",
     enter_full_name: "Введите имя и фамилию:",
     enter_phone: "Введите или отправьте номер телефона:",
     main_menu: "Главное меню:",
     main_buttons: [
-      ["🛍 Заказать", "🔥 Акция"],
-      ["📦 Мои заказы", "⚙️ Настройки"],
-      ["📍 Ближайший филиал"],
+      ["Заказать", "Акция"],
+      ["Мои заказы", "Настройки"],
+      ["Ближайший филиал"],
     ],
-    back: "⬅️ Назад",
-    share_contact: "📞 Отправить номер телефона",
+    back: "Назад",
+    share_contact: "Отправить номер телефона",
     help: "Помощь",
     delivery: "Доставка",
     pickup: "Самовывоз",
-    share_location: "📍 Поделиться местоположением",
+    share_location: "Поделиться местоположением",
   },
-  uz: {
+  UZ: {
     chosen_language: "Tanlangan til:",
     enter_full_name: "Ismingiz va familiyangizni kiriting:",
     enter_phone: "Telefon raqamingizni kiriting yoki yuboring:",
     main_menu: "Asosiy menyu:",
     main_buttons: [
-      ["🛍 Buyurtma berish", "🔥 Aksiya"],
-      ["📦 Buyurtmalarim", "⚙️ Sozlamalar"],
-      ["📍 Eng yaqin filial"],
+      ["Buyurtma berish", "Aksiya"],
+      ["Buyurtmalarim", "Sozlamalar"],
+      ["Eng yaqin filial"],
     ],
-    back: "⬅️ Orqaga",
-    share_contact: "📞 Telefon raqamni yuborish",
+    back: "Orqaga",
+    share_contact: "Telefon raqamni yuborish",
     help: "Yordam",
     delivery: "Yetkazib berish",
     pickup: "Olib ketish",
-    share_location: "📍 Manzilni yuborish",
+    share_location: "Manzilni yuborish",
   },
 };

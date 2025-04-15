@@ -17,6 +17,7 @@ model User {
   address   String?
   latitude  Float?
   longitude Float?
+  language  Lang     @default(RU)
   orders    Order[]
 }
 
@@ -33,7 +34,7 @@ model Product {
   id          Int         @id @default(autoincrement())
   name        String      @unique
   description String?
-  price       Decimal
+  price       Int
   imageUrl    String?
   categoryId  Int?
   createdAt   DateTime    @default(now())
@@ -67,6 +68,11 @@ model OrderItem {
 enum Role {
   CUSTOMER
   ADMIN
+}
+
+enum Lang {
+  RU
+  UZ
 }
 
 enum OrderStatus {

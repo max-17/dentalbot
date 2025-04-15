@@ -1,7 +1,7 @@
 import { MyContext } from "./types";
 import { db } from "./lib/db";
 import { handleCart } from "./menu";
-import { Lang, TEXTS } from "./lib/i18n";
+import { Lang } from "./lib/i18n";
 
 export const cartRemove = async (ctx: MyContext) => {
   const orderItemId = Number(ctx.match![1]);
@@ -11,7 +11,7 @@ export const cartRemove = async (ctx: MyContext) => {
     where: { id: orderItemId },
   });
 
-  await ctx.answerCallbackQuery("Товар удален из корзины.");
+  await ctx.answerCallbackQuery(ctx.t("item_removed_from_cart"));
 
   // Get updated cart details
   const { text, inlineKeyboard } = await handleCart(ctx, false);
@@ -25,6 +25,8 @@ export const cartRemove = async (ctx: MyContext) => {
 export const cartConfirm = async (ctx: MyContext) => {
   const userId = ctx.from?.id;
   if (!userId) return;
+  const orderId = ctx.session.orderId;
+  if (!orderId) return await ctx.answerCallbackQuery(ctx.t("order_not_found"));
 
   // Confirm the order
   await db.order.updateMany({
@@ -32,12 +34,54 @@ export const cartConfirm = async (ctx: MyContext) => {
     data: { status: "CONFIRMED" },
   });
 
-  await ctx.answerCallbackQuery("Заказ подтвержден.");
-  await ctx.editMessageText("Ваш заказ подтвержден. Спасибо за покупку!", {
-    reply_markup: {
-      inline_keyboard: [[{ text: "⬅️ Назад", callback_data: "cart_back" }]],
+  await ctx.answerCallbackQuery(ctx.t("order_confirmed"));
+  await ctx.editMessageText(ctx.t("order_confirmed_message"));
+
+  // Send message to group
+  const order = await db.order.findUnique({
+    where: { userId, id: orderId },
+    include: {
+      items: {
+        include: { product: true },
+      },
     },
   });
+  if (order) {
+    const userDetails = await db.user.findUnique({
+      where: { id: userId },
+    });
+    const userName = ctx.from.username;
+    const orderDetails = order.items.map((item) => {
+      return `${item.product.name} - x${item.quantity} = ${
+        item.product.price * item.quantity
+      }  y.e`;
+    });
+
+    const total = order.items.reduce(
+      (total, item) => total + item.product.price * item.quantity,
+      0
+    );
+
+    const message = `${ctx.t("new_order_from_user", {
+      username: userName || ctx.t("not_specified"),
+    })}:
+    \n${ctx.t("name")}: ${userDetails?.fullName || ctx.t("not_specified")}
+    \n${ctx.t("phone")}: ${userDetails?.phone || ctx.t("not_specified")}
+    \n${ctx.t("address")}: ${userDetails?.address || ctx.t("not_specified")}
+    \n${ctx.t("delivery")}: ${order.delivery}
+    \n${orderDetails.join("\n")} \n${ctx.t("total")}: ${total}  y.e`;
+
+    // Send location message to group
+    const sentMessage = await ctx.api.sendMessage(-1002686064315, message);
+    if (userDetails?.latitude && userDetails?.longitude) {
+      await ctx.api.sendLocation(
+        -1002686064315,
+        userDetails.latitude,
+        userDetails.longitude,
+        { reply_to_message_id: sentMessage.message_id }
+      );
+    }
+  }
 };
 
 export const cartClear = async (ctx: MyContext) => {
@@ -55,7 +99,7 @@ export const cartClear = async (ctx: MyContext) => {
     });
   }
 
-  await ctx.answerCallbackQuery("Корзина очищена.");
+  await ctx.answerCallbackQuery(ctx.t("cart_cleared"));
 
   // Get updated cart details
   const { text, inlineKeyboard } = await handleCart(ctx, false);
@@ -75,7 +119,7 @@ export const cartDecrease = async (ctx: MyContext) => {
   });
 
   if (!orderItem) {
-    await ctx.answerCallbackQuery("Товар не найден.");
+    await ctx.answerCallbackQuery(ctx.t("item_not_found"));
     return;
   }
 
@@ -85,13 +129,13 @@ export const cartDecrease = async (ctx: MyContext) => {
       where: { id: orderItemId },
       data: { quantity: { decrement: 1 } },
     });
-    await ctx.answerCallbackQuery("Количество уменьшено.");
+    await ctx.answerCallbackQuery(ctx.t("quantity_decreased"));
   } else {
     // Remove the item if quantity is 1
     await db.orderItem.delete({
       where: { id: orderItemId },
     });
-    await ctx.answerCallbackQuery("Товар удален из корзины.");
+    await ctx.answerCallbackQuery(ctx.t("item_removed_from_cart"));
   }
 
   // Get updated cart details
@@ -129,6 +173,9 @@ export const addToCart = async (ctx: MyContext) => {
     });
   }
 
+  // Save the orderId to the session
+  ctx.session.orderId = cart.id;
+
   // Add the product to the cart
   const orderItem = await db.orderItem.findFirst({
     where: { orderId: cart.id, productId, order: { status: "PENDING" } },
@@ -149,12 +196,10 @@ export const addToCart = async (ctx: MyContext) => {
     });
   }
 
-  await ctx.answerCallbackQuery("Товар добавлен в корзину.");
+  await ctx.answerCallbackQuery(ctx.t("item_added_to_cart"));
 
   // Delete the product detail message
   await ctx.deleteMessage();
-
-  //remove cart messages from chat
 
   // Show the updated cart
   await handleCart(ctx);
@@ -169,7 +214,7 @@ export const cartIncrease = async (ctx: MyContext) => {
     data: { quantity: { increment: 1 } },
   });
 
-  await ctx.answerCallbackQuery("Количество увеличено.");
+  await ctx.answerCallbackQuery(ctx.t("quantity_increased"));
 
   // Get updated cart details
   const { text, inlineKeyboard } = await handleCart(ctx, false);
@@ -193,7 +238,7 @@ export const decrease_ = async (ctx: MyContext) => {
     1
   );
 
-  await ctx.answerCallbackQuery("Количество уменьшено.");
+  await ctx.answerCallbackQuery(ctx.t("quantity_decreased"));
   await ctx.editMessageReplyMarkup({
     reply_markup: {
       inline_keyboard: [
@@ -207,7 +252,7 @@ export const decrease_ = async (ctx: MyContext) => {
         ],
         [
           {
-            text: "Добавить в корзину",
+            text: ctx.t("add_to_cart"),
             callback_data: `add_to_cart_${productId}`,
           },
         ],
@@ -226,7 +271,7 @@ export const increase_ = async (ctx: MyContext) => {
   ctx.session.cart = ctx.session.cart || {};
   ctx.session.cart[productId] = (ctx.session.cart[productId] || 1) + 1;
 
-  await ctx.answerCallbackQuery("Количество увеличено.");
+  await ctx.answerCallbackQuery(ctx.t("quantity_increased"));
 
   await ctx.editMessageReplyMarkup({
     reply_markup: {
@@ -241,7 +286,7 @@ export const increase_ = async (ctx: MyContext) => {
         ],
         [
           {
-            text: "Добавить в корзину",
+            text: ctx.t("add_to_cart"),
             callback_data: `add_to_cart_${productId}`,
           },
         ],
@@ -254,10 +299,10 @@ export const ru_uz = async (ctx: MyContext) => {
   if (ctx.session.step !== "lang") return;
   const lang = ctx.callbackQuery?.data as Lang;
   if (!lang) return;
-  ctx.session.lang = lang;
+  ctx.session.__language_code = lang;
   ctx.session.step = "fullname";
   await ctx.answerCallbackQuery(
-    `${TEXTS[lang].chosen_language} ${lang.toUpperCase()}`
+    ctx.t("chosen_language") + ` ${lang.toUpperCase()}`
   );
-  await ctx.reply(TEXTS[lang].enter_full_name);
+  await ctx.reply(ctx.t("enter_full_name"));
 };

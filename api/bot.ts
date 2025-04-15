@@ -1,6 +1,6 @@
-import { Bot, Keyboard, session, webhookCallback } from "grammy";
+import { Bot, Keyboard, session, webhookCallback, SessionFlavor } from "grammy";
 import { config } from "dotenv";
-import { TEXTS } from "../lib/i18n";
+import { I18n } from "@grammyjs/i18n";
 import {
   handleBackButton,
   handleCart,
@@ -28,13 +28,22 @@ import { MyContext, SessionData } from "../types";
 config();
 
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
-export default webhookCallback(bot, "https");
+
 // Initialize session
 bot.use(
   session({
     initial: (): SessionData => ({ step: "lang" }),
   })
 );
+
+// Initialize i18n middleware
+const i18n = new I18n({
+  defaultLocale: "ru", // Default language
+  directory: "locales", // Path to the locales folder
+  useSession: true, // Use session to store the user's language
+});
+
+bot.use(i18n);
 
 bot.command("start", startCommand);
 
@@ -48,16 +57,16 @@ bot.callbackQuery(["uz", "ru"], ru_uz);
 
 // Handle contact message for registration (phone)
 bot.on("message:contact", async (ctx) => {
-  const { step, lang } = ctx.session;
+  const { step, __language_code: lang } = ctx.session;
   if (!lang) return;
   if (step === "contact") {
     ctx.session.phone = ctx.message.contact.phone_number;
     ctx.session.step = "location";
     // Ask for location using a reply keyboard that requests location.
     const locationKeyboard = new Keyboard()
-      .requestLocation("Share Location")
+      .requestLocation(ctx.t("share_location"))
       .resized();
-    await ctx.reply(TEXTS[lang].share_location, {
+    await ctx.reply(ctx.t("share_location"), {
       reply_markup: locationKeyboard,
     });
     return;
@@ -66,7 +75,7 @@ bot.on("message:contact", async (ctx) => {
 
 // Handle location message for registration.
 bot.on("message:location", async (ctx) => {
-  const { step, lang } = ctx.session;
+  const { step, __language_code: lang } = ctx.session;
   if (!lang) return;
   if (step === "location") {
     ctx.session.latitude = ctx.message.location.latitude;
@@ -83,7 +92,8 @@ bot.on("message:location", async (ctx) => {
 
 // Handle text messages for full name and menu navigation.
 bot.on("message:text", async (ctx) => {
-  const { step, lang } = ctx.session;
+  if (ctx.chat?.type !== "private") return;
+  const { step, __language_code: lang } = ctx.session;
 
   const text = ctx.message.text;
 
@@ -92,9 +102,9 @@ bot.on("message:text", async (ctx) => {
     ctx.session.fullName = text;
     ctx.session.step = "contact";
     const contactKeyboard = new Keyboard()
-      .requestContact(TEXTS[lang].share_contact)
+      .requestContact(ctx.t("share_contact"))
       .resized();
-    await ctx.reply(TEXTS[lang].enter_phone, { reply_markup: contactKeyboard });
+    await ctx.reply(ctx.t("enter_phone"), { reply_markup: contactKeyboard });
     return;
   }
 
@@ -111,38 +121,34 @@ bot.on("message:text", async (ctx) => {
 
   // Menu navigation
   if (step === "done" && lang) {
-    if (text === "🛍 Заказать") {
+    if (text === ctx.t("menu_order")) {
       await showDeliveryOptions(ctx);
       return;
     }
 
-    if (
-      ["Доставка", "Самовывоз", "Yetkazib berish", "Olib ketish"].includes(text)
-    ) {
+    if ([ctx.t("delivery"), ctx.t("pickup")].includes(text)) {
       await showCategories(ctx);
       return;
     }
 
-    if (text === TEXTS[lang].back) {
+    if (text === ctx.t("back")) {
       await handleBackButton(ctx);
       return;
     }
 
-    if (text === "🛒 Корзина") {
+    if (text === ctx.t("menu_cart")) {
       await handleCart(ctx);
       return;
     }
-
     if (ctx.session.currentLevel === "category") {
       const category = await db.category.findUnique({ where: { name: text } });
       if (category) {
         await showSubcategories(ctx, category.id);
       } else {
-        await ctx.reply("Категория не найдена.");
+        await ctx.reply(ctx.t("category_not_found"));
       }
       return;
     }
-
     if (ctx.session.currentLevel === "subcategory") {
       const subcategory = await db.category.findUnique({
         where: { name: text },
@@ -150,7 +156,7 @@ bot.on("message:text", async (ctx) => {
       if (subcategory) {
         await showProducts(ctx, subcategory.id);
       } else {
-        await ctx.reply("Подкатегория не найдена.");
+        await ctx.reply(ctx.t("subcategory_not_found"));
       }
       return;
     }
@@ -160,7 +166,7 @@ bot.on("message:text", async (ctx) => {
       return;
     }
   }
-  await ctx.reply("перезапустить бота: /start");
+  await ctx.reply(ctx.t("restart_bot"));
 });
 
 bot.callbackQuery("cart_confirm", cartConfirm);
@@ -203,4 +209,4 @@ bot.catch((err) => {
   console.error("Bot error:", err);
 });
 
-// bot.start();
+bot.start();

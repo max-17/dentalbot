@@ -14,7 +14,7 @@ export async function startCommand(ctx: MyContext) {
       // User already registered. Use session language if available, or default to "ru".
       ctx.session = {
         step: "done",
-        lang: ctx.session.lang || "ru",
+        __language_code: dbUser.language.toLocaleLowerCase() as "RU" | "UZ",
         fullName: dbUser.fullName,
         phone: dbUser.phone,
         address: dbUser.address || "",
