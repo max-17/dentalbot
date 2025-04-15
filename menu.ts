@@ -36,24 +36,24 @@ export const menu: { [lang: string]: MenuNode } = {
   UZ: {
     text: "Asosiy menyu",
     submenus: {
-      "Buyurtma berish": {
-        text: "Buyurtma berish",
+      "🛍️ Buyurtma berish": {
+        text: "🛍️ Buyurtma berish",
         submenus: {
-          "Yetkazib berish": { text: "Yetkazib berish" },
-          "Olib ketish": { text: "Olib ketish" },
+          "🚚 Yetkazib berish": { text: "🚚 Yetkazib berish" },
+          "🏃‍♂️ Olib ketish": { text: "🏃‍♂️ Olib ketish" },
         },
       },
-      Buyurtmalarim: { text: "Buyurtmalarim" },
-      Sozlamalar: {
-        text: "Sozlamalar",
+      "📦 Buyurtmalarim": { text: "📦 Buyurtmalarim" },
+      "⚙️ Sozlamalar": {
+        text: "⚙️ Sozlamalar",
         submenus: {
-          Yordam: { text: "Yordam" },
-          "Tilni o'zgartirish": { text: "Tilni o'zgartirish" },
-          "Telefonni o'zgartirish": { text: "Telefonni o'zgartirish" },
-          "Manzilni o'zgartirish": { text: "Manzilni o'zgartirish" },
+          "❓ Yordam": { text: "❓ Yordam" },
+          "🌐 Tilni o'zgartirish": { text: "🌐 Tilni o'zgartirish" },
+          "📞 Telefonni o'zgartirish": { text: "📞 Telefonni o'zgartirish" },
+          "🏠 Manzilni o'zgartirish": { text: "🏠 Manzilni o'zgartirish" },
         },
       },
-      "Eng yaqin filial": { text: "Eng yaqin filial" },
+      "📍 Eng yaqin filial": { text: "📍 Eng yaqin filial" },
     },
   },
 };
