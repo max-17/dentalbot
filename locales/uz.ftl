@@ -19,7 +19,20 @@ restart_bot = Botni qayta ishga tushirish: /start
 category_not_found = Kategoriya topilmadi.
 user_not_found = Foydalanuvchi topilmadi.
 subcategory_not_found = Subkategoriya topilmadi.
-main_menu = Asosiy menyu
+main_menu =
+  Onlayn do'konimizga xush kelibsiz
+  "Proteco Sharq" 👋
+  Katalog/menyuni ko‘rish uchun
+  "Ilovani ochish" tugmasini bosing 🛒🍜
+
+  Biz bilan bog‘lanish:
+  📍 9-Abdulla Qahhor tor ko‘chasi, 1A,
+  Yakkasaroy tumani, Toshkent shahri
+  👩‍💼 Barcha savollar bo‘yicha menejer
+  @vanilla_doll
+  📞 +998977026841
+  🕙 Ish vaqti: 9:00–18:00
+  🏍 Shahar bo‘ylab yetkazib beramiz  
 delivery = Yetkazib berish
 pickup = Olib ketish
 not_specified = Ko'rsatilmagan

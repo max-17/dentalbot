@@ -276,19 +276,10 @@ export async function handleCart(ctx: MyContext, sendReply: boolean = true) {
   });
 
   if (!cart || cart.items.length === 0) {
-    const emptyCartResponse = {
-      text: ctx.t("cart_empty"),
-      inlineKeyboard: [],
-    };
     if (sendReply) {
-      await ctx.reply(emptyCartResponse.text, {
-        reply_markup: {
-          keyboard: [[ctx.t("back")]],
-          resize_keyboard: true,
-        },
-      });
+      await ctx.reply(ctx.t("cart_empty"));
     }
-    return emptyCartResponse;
+    return { text: ctx.t("cart_empty"), inlineKeyboard: [] };
   }
 
   // Format the cart items

@@ -29,9 +29,18 @@ export const cartConfirm = async (ctx: MyContext) => {
   if (!orderId) return await ctx.answerCallbackQuery(ctx.t("order_not_found"));
 
   // Confirm the order
-  await db.order.updateMany({
-    where: { userId, status: "PENDING" },
-    data: { status: "CONFIRMED" },
+  const total = (
+    await db.orderItem.findMany({
+      where: { orderId },
+      include: { product: true },
+    })
+  ).reduce((acc, current) => acc + current.product.price * current.quantity, 0);
+  await db.order.update({
+    where: { userId, status: "PENDING", id: orderId },
+    data: {
+      status: "CONFIRMED",
+      total,
+    },
   });
 
   await ctx.answerCallbackQuery(ctx.t("order_confirmed"));
