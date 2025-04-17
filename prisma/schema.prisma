@@ -80,6 +80,7 @@ enum OrderStatus {
   CONFIRMED
   DELIVERED
   CANCELED
+  PROCESSING
 }
 
 enum DeliveryType {
