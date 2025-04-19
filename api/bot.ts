@@ -1,11 +1,4 @@
-import {
-  Bot,
-  Keyboard,
-  session,
-  webhookCallback,
-  SessionFlavor,
-  InlineKeyboard,
-} from "grammy";
+import { Bot, Keyboard, session, InlineKeyboard } from "grammy";
 import { config } from "dotenv";
 import { I18n } from "@grammyjs/i18n";
 import {
@@ -45,7 +38,7 @@ bot.use(
 );
 
 // Initialize i18n middleware
-const i18n = new I18n({
+export const i18n = new I18n({
   defaultLocale: "RU", // Default language
   directory: "locales", // Path to the locales folder
   useSession: true, // Use session to store the user's language

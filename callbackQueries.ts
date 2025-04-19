@@ -2,6 +2,7 @@ import { MyContext } from "./types";
 import { db } from "./lib/db";
 import { handleCart } from "./menu";
 import { Lang } from "./lib/i18n";
+import { i18n } from "./api/bot";
 
 export const cartRemove = async (ctx: MyContext) => {
   const orderItemId = Number(ctx.match![1]);
@@ -71,14 +72,20 @@ export const cartConfirm = async (ctx: MyContext) => {
       0
     );
 
-    const message = `${ctx.t("new_order_from_user", {
-      username: userName || ctx.t("not_specified"),
+    const message = `${i18n.t("RU", "new_order_from_user", {
+      username: userName || i18n.t("RU", "not_specified"),
     })}:
-    \n${ctx.t("name")}: ${userDetails?.fullName || ctx.t("not_specified")}
-    \n${ctx.t("phone")}: ${userDetails?.phone || ctx.t("not_specified")}
-    \n${ctx.t("address")}: ${userDetails?.address || ctx.t("not_specified")}
-    \n${ctx.t("delivery")}: ${order.delivery}
-    \n${orderDetails.join("\n")} \n${ctx.t("total")}: ${total}  y.e`;
+    \n${i18n.t("RU", "name")}: ${
+      userDetails?.fullName || i18n.t("RU", "not_specified")
+    }
+    \n${i18n.t("RU", "phone")}: ${
+      userDetails?.phone || i18n.t("RU", "not_specified")
+    }
+    \n${i18n.t("RU", "address")}: ${
+      userDetails?.address || i18n.t("RU", "not_specified")
+    }
+    \n${i18n.t("RU", "delivery")}: ${order.delivery}
+    \n${orderDetails.join("\n")} \n${i18n.t("RU", "total")}: ${total}  y.e`;
 
     // Send location message to group
     const sentMessage = await ctx.api.sendMessage(-1002686064315, message);
