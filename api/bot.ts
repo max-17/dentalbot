@@ -26,6 +26,7 @@ import {
   ru_uz,
 } from "../callbackQueries";
 import { MyContext, SessionData } from "../types";
+import { getAddressFromCoords } from "../lib/utils";
 config();
 
 export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
@@ -87,12 +88,19 @@ bot.on("message:location", async (ctx) => {
   if (step === "location") {
     ctx.session.latitude = ctx.message.location.latitude;
     ctx.session.longitude = ctx.message.location.longitude;
+    const adress = await getAddressFromCoords(
+      ctx.session.latitude,
+      ctx.session.longitude
+    );
+    if (adress) ctx.session.address = adress;
+
     ctx.session.step = "done";
     // Save the registered user.
     if (ctx.from?.id) {
       await saveUser(ctx.from.id, ctx.session);
     }
-    await openMenu(ctx);
+    await ctx.reply(ctx.t("location_saved"));
+    await ctx.reply(ctx.t("open_menu"));
     return;
   }
 });
@@ -122,7 +130,8 @@ bot.on("message:text", async (ctx) => {
     if (ctx.from?.id) {
       await saveUser(ctx.from.id, ctx.session);
     }
-    await openMenu(ctx);
+    await ctx.reply(ctx.t("location_saved"));
+    await ctx.reply(ctx.t("open_menu"));
     return;
   }
 
@@ -144,6 +153,16 @@ bot.on("message:text", async (ctx) => {
 
       case ctx.t("back"):
         await handleBackButton(ctx);
+        return;
+
+      case ctx.t("change_address"):
+        ctx.session.step = "location";
+        const locationKeyboard = new Keyboard()
+          .requestLocation(ctx.t("share_location"))
+          .resized();
+        await ctx.reply(ctx.t("share_location"), {
+          reply_markup: locationKeyboard,
+        });
         return;
 
       case ctx.t("menu_cart"):

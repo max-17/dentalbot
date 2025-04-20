@@ -62,3 +62,5 @@ change_phone = Telefonni o'zgartirish
 change_address = Manzilni o'zgartirish
 settings = Sozlamalar
 language_changed = Til o'zgartirildi. Iltimos botni qayta ishga tushiring! /start
+open_menu = Asosoy menuni ochish uchun /main buruqni tanlang!
+location_saved = Manzilinggiz saqlandi!
