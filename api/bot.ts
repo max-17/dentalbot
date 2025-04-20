@@ -69,7 +69,8 @@ bot.on("message:contact", async (ctx) => {
       reply_markup: locationKeyboard,
     });
     return;
-  } else {
+  }
+  if (step === "change_contact") {
     ctx.session.phone = ctx.message.contact.phone_number;
     if (ctx.from?.id) {
       await db.user.update({
@@ -77,6 +78,7 @@ bot.on("message:contact", async (ctx) => {
         data: { phone: ctx.session.phone },
       });
       await ctx.reply(ctx.t("phone_updated"));
+      await ctx.reply(ctx.t("open_menu"));
     } else await ctx.reply(ctx.t("user_not_found"));
   }
 });
@@ -134,6 +136,17 @@ bot.on("message:text", async (ctx) => {
     await ctx.reply(ctx.t("open_menu"));
     return;
   }
+  if (step === "change_contact") {
+    ctx.session.phone = text;
+    await db.user.update({
+      where: { id: ctx.from?.id },
+      data: { phone: ctx.session.phone },
+    });
+    ctx.session.step = "done";
+    await ctx.reply(ctx.t("phone_updated"));
+    await ctx.reply(ctx.t("open_menu"));
+    return;
+  }
 
   // Menu navigation
   if (step === "done" && lang) {
@@ -178,6 +191,7 @@ bot.on("message:text", async (ctx) => {
         });
         return;
       case ctx.t("change_phone"):
+        ctx.session.step = "change_contact";
         const contactKeyboard = new Keyboard()
           .requestContact(ctx.t("share_contact"))
           .resized();

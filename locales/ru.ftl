@@ -64,3 +64,4 @@ change_address = Изменить адрес
 language_changed = Язык изменён. Пожалуйста, перезапустите бота! /start
 open_menu = Выберите команду /main, чтобы открыть главное меню!
 location_saved = Ваш адрес сохранён!
+phone_updated = Номер телефона изменён!

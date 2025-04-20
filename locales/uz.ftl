@@ -64,3 +64,4 @@ settings = Sozlamalar
 language_changed = Til o'zgartirildi. Iltimos botni qayta ishga tushiring! /start
 open_menu = Asosoy menuni ochish uchun /main buruqni tanlang!
 location_saved = Manzilinggiz saqlandi!
+phone_updated = Telefon raqami o'zgartirildi!

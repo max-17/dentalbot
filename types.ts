@@ -3,7 +3,13 @@ import { Lang } from "./lib/i18n";
 import { type I18nFlavor } from "@grammyjs/i18n";
 
 export interface SessionData {
-  step: "lang" | "fullname" | "contact" | "location" | "done";
+  step:
+    | "lang"
+    | "fullname"
+    | "contact"
+    | "change_contact"
+    | "location"
+    | "done";
   __language_code?: Lang;
   fullName?: string;
   phone?: string;
